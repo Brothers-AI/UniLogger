@@ -1,3 +1,13 @@
+/**
+ * @file UniLogger.h
+ * @author Brothers-AI (brothers.ai.local@gmail.com)
+ * @brief UniLogger header file
+ * @version 0.1
+ * @date 2024-01-25
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
 #ifndef __UNI_LOGGER_H__
 #define __UNI_LOGGER_H__
 
@@ -7,8 +17,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define LOG_TAG "UniLogger"
 
 /**
  * @brief Enums for Log Levels
@@ -68,21 +76,26 @@ void setLogStream(enum LogStream stream);
 void setLogFile(const char *filepath);
 
 /**
+ * @brief Function to close the UniLogger
+ */
+void closeLogger();
+
+/**
  * @brief Common function to log the prints
  * 
  * @param level log level
  * @param format print format arguments
  * @param ... 
  */
-void logCustom(enum LogLevel level, const char *logTag, const char *format, ...);
+void logCustom(enum LogLevel level, const char *format, ...);
 
-#define LOG_FATAL(...)   logCustom(LOG_LEVEL_FATAL, LOG_TAG, ##__VA_ARGS__)
-#define LOG_ERROR(...)   logCustom(LOG_LEVEL_ERROR, LOG_TAG, ##__VA_ARGS__)
-#define LOG_WARN(...)    logCustom(LOG_LEVEL_WARN, LOG_TAG, ##__VA_ARGS__)
-#define LOG_INFO(...)    logCustom(LOG_LEVEL_INFO, LOG_TAG, ##__VA_ARGS__)
-#define LOG_DEBUG(...)   logCustom(LOG_LEVEL_DEBUG, LOG_TAG, ##__VA_ARGS__)
-#define LOG_TRACE(...)   logCustom(LOG_LEVEL_TRACE, LOG_TAG, ##__VA_ARGS__)
-#define LOG_PROFILE(...) logCustom(LOG_LEVEL_PROFILE, LOG_TAG, ##__VA_ARGS__)
+#define LOG_FATAL(...)   logCustom(LOG_LEVEL_FATAL, ##__VA_ARGS__)
+#define LOG_ERROR(...)   logCustom(LOG_LEVEL_ERROR, ##__VA_ARGS__)
+#define LOG_WARN(...)    logCustom(LOG_LEVEL_WARN, ##__VA_ARGS__)
+#define LOG_INFO(...)    logCustom(LOG_LEVEL_INFO, ##__VA_ARGS__)
+#define LOG_DEBUG(...)   logCustom(LOG_LEVEL_DEBUG, ##__VA_ARGS__)
+#define LOG_TRACE(...)   logCustom(LOG_LEVEL_TRACE, ##__VA_ARGS__)
+#define LOG_PROFILE(...) logCustom(LOG_LEVEL_PROFILE, ##__VA_ARGS__)
 
 #ifdef __cplusplus
 }

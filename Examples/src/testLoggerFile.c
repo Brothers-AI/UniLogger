@@ -1,3 +1,13 @@
+/**
+ * @file testLoggerFile.c
+ * @author Brothers-AI (brothers.ai.local@gmail.com)
+ * @brief Test example for using UniLogger with logfile
+ * @version 0.1
+ * @date 2024-01-25
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
 #include <stdio.h>
 
 // UniLogger Includes
@@ -19,6 +29,9 @@ int main(int argc, char const *argv[])
     LOG_DEBUG("Debug logs");
     LOG_TRACE("Trace logs");
     LOG_PROFILE("Profile logs");
+
+    // Close the logger
+    closeLogger();
 
     return 0;
 }

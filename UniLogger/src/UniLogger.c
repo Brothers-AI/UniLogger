@@ -1,8 +1,19 @@
+/**
+ * @file UniLogger.c
+ * @author Brothers-AI (brothers.ai.local@gmail.com)
+ * @brief UniLogger implementation in c
+ * @version 0.1
+ * @date 2024-01-25
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
 // System Include
 #include <sys/time.h>
 #include <time.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <pthread.h>
 
 #include <UniLogger.h>
 
@@ -21,6 +32,12 @@ unsigned char gIsLogStreamInitalized = 0;
 // Flag to Check is Log File Initalized, Default to 0
 unsigned char gIsLogFileInitalized = 0;
 
+// Mutex for log handler
+static pthread_mutex_t s_logMutex;
+
+// Flag to check mutex initalized
+unsigned char gIsMutexInitalized = 0;
+
 /**
  * @brief Log level names
  */
@@ -37,13 +54,13 @@ const char logLevelNames[LOG_MAX_LEVEL][10] = {
  * @brief Color Codes for Different Log Levels
  */
 const char colorCodes[LOG_MAX_LEVEL][10] = {
-            "\033[1;31m",
-            "\033[0;31m",
-            "\033[0;33m",
-            "\033[0;32m",
-            "\033[0;36m",
-            "\033[0;35m",
-            "\033[0;32m"};
+    "\033[1;31m",
+    "\033[0;31m",
+    "\033[0;33m",
+    "\033[0;32m",
+    "\033[0;36m",
+    "\033[0;35m",
+    "\033[0;32m"};
 
 /**
  * @brief Print Available Log Levels
@@ -59,6 +76,26 @@ void printAvaialbleLogs()
     }
     // Log Level for Profiling
     printf("P\n");
+}
+
+/**
+ * @brief Function to initalize the mutex
+ * for avoiding interleaved messages
+ * 
+ * @return int 0 -> Success, -2 -> Failure
+ */
+int initalizeMutex()
+{
+    if (pthread_mutex_init(&s_logMutex, NULL) != 0)
+    {
+        printf("[UniLogger] Mutex initalization failed.\n");
+        return -1;
+    }
+
+    // Set the flag
+    gIsMutexInitalized = 1;
+
+    return 0;
 }
 
 /**
@@ -109,7 +146,7 @@ unsigned char initalizeLogFile(enum LogStream stream, const char *filepath)
  * @param format print format
  * @param args print arguments
  */
-void printLog(const char *logLevelName, const char *logTag, const char *colorCode, const char *format, va_list args, unsigned char isSavingToFile)
+void printLog(const char *logLevelName, const char *colorCode, const char *format, va_list args, unsigned char isSavingToFile)
 {
     char dateTime[30];
     struct timeval currTime;
@@ -128,16 +165,40 @@ void printLog(const char *logLevelName, const char *logTag, const char *colorCod
         // Output Stream in stdout
         if (isSavingToFile)
         {
+            // To avoid interleaved messages
+            if (gIsMutexInitalized)
+            {
+                pthread_mutex_lock(&s_logMutex);
+            }
+            
             // Remove the color codes from the string
-            fprintf(stdout, "[%s]:[%s]:[%s] ", dateTime, logLevelName, logTag);
+            fprintf(stdout, "[%s]:[%s] ", dateTime, logLevelName);
             vfprintf(stdout, format, args);
             vfprintf(stdout, "\n", args);
+
+            // To avoid interleaved messages
+            if (gIsMutexInitalized)
+            {
+                pthread_mutex_unlock(&s_logMutex);
+            }
         }
         else
         {
-            fprintf(stdout, "%s[%s]:[%s]:[%s] ", colorCode, dateTime, logLevelName, logTag);
+            // To avoid interleaved messages
+            if (gIsMutexInitalized)
+            {
+                pthread_mutex_lock(&s_logMutex);
+            }
+
+            fprintf(stdout, "%s[%s]:[%s] ", colorCode, dateTime, logLevelName);
             vfprintf(stdout, format, args);
             vfprintf(stdout, "\033[1;0m\n", args);
+
+            // To avoid interleaved messages
+            if (gIsMutexInitalized)
+            {
+                pthread_mutex_unlock(&s_logMutex);
+            }
         }
     }
     else if (STREAM_STDERR == gCurrLogStream)
@@ -145,22 +206,55 @@ void printLog(const char *logLevelName, const char *logTag, const char *colorCod
         // Output Stream in stderr
         if (isSavingToFile)
         {
+            // To avoid interleaved messages
+            if (gIsMutexInitalized)
+            {
+                pthread_mutex_lock(&s_logMutex);
+            }
+
             // Remove the color codes from the string
-            fprintf(stderr, "[%s]:[%s]:[%s] ", dateTime, logLevelName, logTag);
+            fprintf(stderr, "[%s]:[%s] ", dateTime, logLevelName);
             vfprintf(stderr, format, args);
             vfprintf(stderr, "\n", args);
+
+            // To avoid interleaved messages
+            if (gIsMutexInitalized)
+            {
+                pthread_mutex_unlock(&s_logMutex);
+            }
         }
         else
         {
-            fprintf(stderr, "%s[%s]:[%s]:[%s] ", colorCode, dateTime, logLevelName, logTag);
+            // To avoid interleaved messages
+            if (gIsMutexInitalized)
+            {
+                pthread_mutex_lock(&s_logMutex);
+            }
+
+            fprintf(stderr, "%s[%s]:[%s] ", colorCode, dateTime, logLevelName);
             vfprintf(stderr, format, args);
             vfprintf(stderr, "\033[1;0m\n", args);
+
+            // To avoid interleaved messages
+            if (gIsMutexInitalized)
+            {
+                pthread_mutex_unlock(&s_logMutex);
+            }
         }
     }
 }
 
 void setLogLevel(enum LogLevel level)
 {
+    // initalize the mutex
+    if (!gIsMutexInitalized)
+    {
+        if (0 != initalizeMutex())
+        {
+            printf("[UniLogger] Failed to initalize mutex\n");
+        }
+    }
+
     // If Already Initalized, Return
     if (gIsLogLevelInitalized)
         return;
@@ -229,6 +323,15 @@ void setLogLevel(enum LogLevel level)
 
 void setLogStream(enum LogStream stream)
 {
+    // initalize the mutex
+    if (!gIsMutexInitalized)
+    {
+        if (0 != initalizeMutex())
+        {
+            printf("[UniLogger] Failed to initalize mutex\n");
+        }
+    }
+
     // Return if already Intialized
     if (gIsLogStreamInitalized)
         return;
@@ -289,6 +392,15 @@ void setLogStream(enum LogStream stream)
 
 void setLogFile(const char *filepath)
 {
+    // initalize the mutex
+    if (!gIsMutexInitalized)
+    {
+        if (0 != initalizeMutex())
+        {
+            printf("[UniLogger] Failed to initalize mutex\n");
+        }
+    }
+
     if (gIsLogLevelInitalized && gIsLogStreamInitalized)
     {
         // Return if already initalized
@@ -338,7 +450,7 @@ void setLogFile(const char *filepath)
     return;
 }
 
-void logCustom(enum LogLevel level, const char *logTag, const char *format, ...)
+void logCustom(enum LogLevel level, const char *format, ...)
 {
     if (LOG_LEVEL_PROFILE == gCurrLogLevel)
     {
@@ -347,7 +459,7 @@ void logCustom(enum LogLevel level, const char *logTag, const char *format, ...)
             // print profile logs and return
             va_list args;
             va_start(args, format);
-            printLog(logLevelNames[(unsigned char)level - 1], logTag, colorCodes[(unsigned char)(level) - 1], format, args, gIsLogFileInitalized);
+            printLog(logLevelNames[(unsigned char)level - 1], colorCodes[(unsigned char)(level) - 1], format, args, gIsLogFileInitalized);
             va_end(args);
             return;
         }
@@ -361,8 +473,33 @@ void logCustom(enum LogLevel level, const char *logTag, const char *format, ...)
         
         va_list args;
         va_start(args, format);
-        printLog(logLevelNames[(unsigned char)level - 1], logTag, colorCodes[(unsigned char)(level) - 1], format, args, gIsLogFileInitalized);
+        printLog(logLevelNames[(unsigned char)level - 1], colorCodes[(unsigned char)(level) - 1], format, args, gIsLogFileInitalized);
         va_end(args);
         return;
     }
+}
+
+void closeLogger()
+{
+    if (gIsMutexInitalized)
+    {
+        // Destroy the mutex
+        pthread_mutex_destroy(&s_logMutex);
+    }
+
+    if (gIsLogLevelInitalized)
+    {
+        // Reset the values
+        gIsLogLevelInitalized = 0;
+        gCurrLogLevel = LOG_LEVEL_OFF;
+    }
+
+    if (gIsLogStreamInitalized)
+    {
+        // Reset the values
+        gIsLogStreamInitalized = 0;
+        gCurrLogStream = STREAM_STDOUT;
+    }
+
+    return;
 }

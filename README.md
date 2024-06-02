@@ -31,6 +31,10 @@ UniLogger is an open source Logger which can be used currently in Linux platform
     
     This Library can be used in C or C++ Application with ease
 
+- **Non-interleaved Messages**
+  
+    This Library can be used in Multiple parallel threads, messages will be shown without interleaving on the same line
+
 </details>
 
 ## Build Steps
