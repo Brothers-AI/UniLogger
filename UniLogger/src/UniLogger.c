@@ -148,17 +148,16 @@ unsigned char initalizeLogFile(enum LogStream stream, const char *filepath)
  */
 void printLog(const char *logLevelName, const char *colorCode, const char *format, va_list args, unsigned char isSavingToFile)
 {
-    char dateTime[30];
+    char dateTime[40];
     struct timeval currTime;
 
     // Get time
     gettimeofday(&currTime, NULL);
 
-    // Get Milliseconds time
-    int milliSeconds = currTime.tv_usec / 1000;
-
     struct tm tm = *localtime((time_t *)(&currTime.tv_sec));
-    sprintf(dateTime, "%d-%02d-%02d %02d:%02d:%02d:%03d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, milliSeconds);
+    sprintf(dateTime, "%d-%02d-%02d %02d:%02d:%02d:%06d",
+            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+            tm.tm_hour, tm.tm_min, tm.tm_sec, currTime.tv_usec);
 
     if (STREAM_STDOUT == gCurrLogStream)
     {
