@@ -139,7 +139,7 @@ unsigned char initalizeLogFile(enum LogStream stream, const char *filepath)
 
 /**
  * @brief Function to Print log on Console or save to file
- * 
+ *
  * @param logLevelName log level name
  * @param logTag log tag
  * @param lineNum line number
@@ -163,7 +163,12 @@ void printLog(const char *logLevelName,
     gettimeofday(&currTime, NULL);
 
     struct tm tm = *localtime((time_t *)(&currTime.tv_sec));
-    sprintf(dateTime, "%d-%02d-%02d %02d:%02d:%02d:%06d",
+#if __linux__
+    sprintf(dateTime, "%d-%02d-%02d %02d:%02d:%02d:%06ld"
+#else
+    sprintf(dateTime, "%d-%02d-%02d %02d:%02d:%02d:%06d"
+#endif // __linux__
+            ,
             tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
             tm.tm_hour, tm.tm_min, tm.tm_sec, currTime.tv_usec);
 
