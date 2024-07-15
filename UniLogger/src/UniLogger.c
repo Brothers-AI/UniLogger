@@ -4,9 +4,9 @@
  * @brief UniLogger implementation in c
  * @version 0.1
  * @date 2024-01-25
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 // System Include
 #include <sys/time.h>
@@ -42,12 +42,12 @@ unsigned char gIsMutexInitalized = 0;
  * @brief Log level names
  */
 const char logLevelNames[LOG_MAX_LEVEL][10] = {
-    "FATAL",
-    "ERROR",
-    "WARN",
-    "INFO",
-    "DEBUG",
-    "TRACE",
+    " FATAL ",
+    " ERROR ",
+    " WARN  ",
+    " INFO  ",
+    " DEBUG ",
+    " TRACE ",
     "PROFILE"};
 
 /**
@@ -69,7 +69,7 @@ void printAvaialbleLogs()
 {
     printf("Available Values are: ");
     for (unsigned char i = (unsigned char)(LOG_LEVEL_OFF);
-            i <= (unsigned char)(LOG_MAX_LEVEL) - 2; i++)
+         i <= (unsigned char)(LOG_MAX_LEVEL)-2; i++)
     {
         // Log Levels
         printf("%d, ", i);
@@ -81,7 +81,7 @@ void printAvaialbleLogs()
 /**
  * @brief Function to initalize the mutex
  * for avoiding interleaved messages
- * 
+ *
  * @return int 0 -> Success, -2 -> Failure
  */
 int initalizeMutex()
@@ -100,11 +100,11 @@ int initalizeMutex()
 
 /**
  * @brief Function to initalize the log file with respective to the stream
- * 
+ *
  * @param stream current selected stream
  * @param filepath filepath to save the log
- * @return true 
- * @return false 
+ * @return true
+ * @return false
  */
 unsigned char initalizeLogFile(enum LogStream stream, const char *filepath)
 {
@@ -138,15 +138,23 @@ unsigned char initalizeLogFile(enum LogStream stream, const char *filepath)
 }
 
 /**
- * @brief Function to Print log on Console
+ * @brief Function to Print log on Console or save to file
  * 
- * @param stream Stream type (stdout or stderr) [Logger::LogStream]
- * @param logLevelName name of the log level
+ * @param logLevelName log level name
+ * @param logTag log tag
+ * @param lineNum line number
  * @param colorCode color code for the log level
  * @param format print format
  * @param args print arguments
+ * @param isSavingToFile flag to save the logs to file
  */
-void printLog(const char *logLevelName, const char *colorCode, const char *format, va_list args, unsigned char isSavingToFile)
+void printLog(const char *logLevelName,
+              const char *logTag,
+              unsigned int lineNum,
+              const char *colorCode,
+              const char *format,
+              va_list args,
+              unsigned char isSavingToFile)
 {
     char dateTime[40];
     struct timeval currTime;
@@ -169,9 +177,9 @@ void printLog(const char *logLevelName, const char *colorCode, const char *forma
             {
                 pthread_mutex_lock(&s_logMutex);
             }
-            
+
             // Remove the color codes from the string
-            fprintf(stdout, "[%s]:[%s] ", dateTime, logLevelName);
+            fprintf(stdout, "[%s]:[%s] [%s:%d] ", dateTime, logLevelName, logTag, lineNum);
             vfprintf(stdout, format, args);
             vfprintf(stdout, "\n", args);
 
@@ -189,7 +197,7 @@ void printLog(const char *logLevelName, const char *colorCode, const char *forma
                 pthread_mutex_lock(&s_logMutex);
             }
 
-            fprintf(stdout, "%s[%s]:[%s] ", colorCode, dateTime, logLevelName);
+            fprintf(stdout, "%s[%s]:[%s] [%s:%d] ", colorCode, dateTime, logLevelName, logTag, lineNum);
             vfprintf(stdout, format, args);
             vfprintf(stdout, "\033[1;0m\n", args);
 
@@ -212,7 +220,7 @@ void printLog(const char *logLevelName, const char *colorCode, const char *forma
             }
 
             // Remove the color codes from the string
-            fprintf(stderr, "[%s]:[%s] ", dateTime, logLevelName);
+            fprintf(stderr, "[%s]:[%s] [%s:%d] ", dateTime, logLevelName, logTag, lineNum);
             vfprintf(stderr, format, args);
             vfprintf(stderr, "\n", args);
 
@@ -230,7 +238,7 @@ void printLog(const char *logLevelName, const char *colorCode, const char *forma
                 pthread_mutex_lock(&s_logMutex);
             }
 
-            fprintf(stderr, "%s[%s]:[%s] ", colorCode, dateTime, logLevelName);
+            fprintf(stderr, "%s[%s]:[%s] [%s:%d] ", colorCode, dateTime, logLevelName, logTag, lineNum);
             vfprintf(stderr, format, args);
             vfprintf(stderr, "\033[1;0m\n", args);
 
@@ -257,7 +265,7 @@ void setLogLevel(enum LogLevel level)
     // If Already Initalized, Return
     if (gIsLogLevelInitalized)
         return;
-    
+
     // Read the Environment Variable
     const char *envName = "LOG_LEVEL";
     const char *envVarData = getenv(envName);
@@ -334,7 +342,7 @@ void setLogStream(enum LogStream stream)
     // Return if already Intialized
     if (gIsLogStreamInitalized)
         return;
-    
+
     // Read the Environment Variable
     const char *envName = "LOG_STREAM";
     const char *envVarData = getenv(envName);
@@ -405,7 +413,7 @@ void setLogFile(const char *filepath)
         // Return if already initalized
         if (gIsLogFileInitalized)
             return;
-        
+
         // Read the Environment Variable
         const char *envName = "LOG_FILE";
         const char *envVarData = getenv(envName);
@@ -449,7 +457,7 @@ void setLogFile(const char *filepath)
     return;
 }
 
-void logCustom(enum LogLevel level, const char *format, ...)
+void logCustom(enum LogLevel level, const char *logTag, unsigned int lineNum, const char *format, ...)
 {
     if (LOG_LEVEL_PROFILE == gCurrLogLevel)
     {
@@ -458,7 +466,13 @@ void logCustom(enum LogLevel level, const char *format, ...)
             // print profile logs and return
             va_list args;
             va_start(args, format);
-            printLog(logLevelNames[(unsigned char)level - 1], colorCodes[(unsigned char)(level) - 1], format, args, gIsLogFileInitalized);
+            printLog(logLevelNames[(unsigned char)level - 1],
+                     logTag,
+                     lineNum,
+                     colorCodes[(unsigned char)(level)-1],
+                     format,
+                     args,
+                     gIsLogFileInitalized);
             va_end(args);
             return;
         }
@@ -469,10 +483,16 @@ void logCustom(enum LogLevel level, const char *format, ...)
         // If greater, return. as it is not required to print
         if (level > gCurrLogLevel)
             return;
-        
+
         va_list args;
         va_start(args, format);
-        printLog(logLevelNames[(unsigned char)level - 1], colorCodes[(unsigned char)(level) - 1], format, args, gIsLogFileInitalized);
+        printLog(logLevelNames[(unsigned char)level - 1],
+                 logTag,
+                 lineNum,
+                 colorCodes[(unsigned char)(level)-1],
+                 format,
+                 args,
+                 gIsLogFileInitalized);
         va_end(args);
         return;
     }
