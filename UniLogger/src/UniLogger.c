@@ -156,7 +156,7 @@ void printLog(const char *logLevelName,
               va_list args,
               unsigned char isSavingToFile)
 {
-    char dateTime[40];
+    static char dateTime[50];
     struct timeval currTime;
 
     // Get time
