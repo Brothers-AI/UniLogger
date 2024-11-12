@@ -25,7 +25,7 @@ enum LogLevel gCurrLogLevel = LOG_LEVEL_OFF;
 unsigned char gIsLogLevelInitalized = 0;
 
 // Current Log Stream, Default to stdout
-enum LogStream gCurrLogStream = STREAM_STDOUT;
+static FILE *gCurrLogStream;
 // Flag to Check Environment Variable for Log Stream is Read or not
 unsigned char gIsLogStreamInitalized = 0;
 
@@ -63,32 +63,107 @@ const char colorCodes[LOG_MAX_LEVEL][10] = {
     "\033[0;32m"};
 
 /**
+ * @brief Method to log line
+ *
+ * @param stream type of the stream
+ * @param logLevelName log level name in string
+ * @param logTag log tag in string
+ * @param lineNum log line number
+ * @param colorCode color code for the for log level
+ * @param isSavingToFile flag to save the log to file
+ * @param format format of print
+ * @param ... arguments of print
+ */
+static inline void LogLine(FILE *stream,
+                           const char *logLevelName,
+                           const char *logTag,
+                           unsigned int lineNum,
+                           const char *colorCode,
+                           unsigned char isSavingToFile,
+                           const char *format,
+                           ...);
+
+/**
+ * @brief Method to log the line with va_list args
+ *
+ * @param stream type of the stream
+ * @param logLevelName log level name in string
+ * @param logTag log tag in string
+ * @param lineNum log line number
+ * @param colorCode color code for the for log level
+ * @param isSavingToFile flag to save the log to file
+ * @param args args of the print
+ * @param format format of the print
+ */
+static inline void LogLineArgs(FILE *stream,
+                               const char *logLevelName,
+                               const char *logTag,
+                               unsigned int lineNum,
+                               const char *colorCode,
+                               unsigned char isSavingToFile,
+                               va_list args,
+                               const char *format);
+
+/**
+ * @brief Information log
+ */
+#define INFO_LOG(...) LogLine(stdout,                            \
+                              logLevelNames[LOG_LEVEL_INFO - 1], \
+                              LOG_TAG,                           \
+                              __LINE__,                          \
+                              colorCodes[LOG_LEVEL_INFO - 1],    \
+                              0, ##__VA_ARGS__)
+
+/**
+ * @brief Error log
+ */
+#define ERROR_LOG(...) LogLine(stdout,                             \
+                               logLevelNames[LOG_LEVEL_ERROR - 1], \
+                               LOG_TAG,                            \
+                               __LINE__,                           \
+                               colorCodes[LOG_LEVEL_ERROR - 1],    \
+                               0, ##__VA_ARGS__)
+
+/**
+ * @brief Warning log
+ */
+#define WARN_LOG(...) LogLine(stdout,                            \
+                              logLevelNames[LOG_LEVEL_WARN - 1], \
+                              LOG_TAG,                           \
+                              __LINE__,                          \
+                              colorCodes[LOG_LEVEL_WARN],        \
+                              0, ##__VA_ARGS__)
+
+/**
  * @brief Print Available Log Levels
  */
-void printAvaialbleLogs()
+void PrintAvaialbleLogs()
 {
-    printf("Available Values are: ");
-    for (unsigned char i = (unsigned char)(LOG_LEVEL_OFF);
+    char stringData[LOG_MAX_LEVEL * 2] = {0};
+    unsigned char i;
+    for (i = (unsigned char)(LOG_LEVEL_OFF);
          i <= (unsigned char)(LOG_MAX_LEVEL)-2; i++)
     {
         // Log Levels
-        printf("%d, ", i);
+        stringData[2 * i] = 48 + i;
+        stringData[2 * i + 1] = ' ';
     }
+    stringData[2 * i] = 'P';
     // Log Level for Profiling
-    printf("P\n");
+    INFO_LOG("Available Values are: %s", stringData);
 }
 
 /**
  * @brief Function to initalize the mutex
  * for avoiding interleaved messages
  *
- * @return int 0 -> Success, -2 -> Failure
+ * @return int 0 -> Success, -1 -> Failure
  */
-int initalizeMutex()
+int InitalizeMutex()
 {
     if (pthread_mutex_init(&s_logMutex, NULL) != 0)
     {
-        printf("[UniLogger] Mutex initalization failed.\n");
+        ERROR_LOG("Mutex initalization failed.");
         return -1;
     }
 
@@ -106,55 +181,26 @@ int initalizeMutex()
  * @return true
  * @return false
  */
-unsigned char initalizeLogFile(enum LogStream stream, const char *filepath)
+unsigned char InitalizeLogFile(FILE *stream, const char *filepath)
 {
     unsigned char isInitalized = 1;
-    if (STREAM_STDOUT == stream)
+    FILE *fp = freopen(filepath, "w", stream);
+    if (!fp)
     {
-        // Redirect stdout to file
-        FILE *fp = freopen(filepath, "w", stdout);
-        if (!fp)
-        {
-            printf("Failed to open file %s for writing\n", filepath);
-            isInitalized = 0;
-        }
-    }
-    else if (STREAM_STDERR == stream)
-    {
-        // Redirect stderr to file
-        FILE *fp = freopen(filepath, "w", stderr);
-        if (!fp)
-        {
-            printf("Failed to open file %s for writing\n", filepath);
-            isInitalized = 0;
-        }
-    }
-    else
-    {
-        printf("Not Implemented for Stream: %d\n", (unsigned char)(stream));
+        ERROR_LOG("Failed to open file %s for writing", filepath);
         isInitalized = 0;
     }
     return isInitalized;
 }
 
-/**
- * @brief Function to Print log on Console or save to file
- *
- * @param logLevelName log level name
- * @param logTag log tag
- * @param lineNum line number
- * @param colorCode color code for the log level
- * @param format print format
- * @param args print arguments
- * @param isSavingToFile flag to save the logs to file
- */
-void printLog(const char *logLevelName,
-              const char *logTag,
-              unsigned int lineNum,
-              const char *colorCode,
-              const char *format,
-              va_list args,
-              unsigned char isSavingToFile)
+static inline void LogLineArgs(FILE *stream,
+                               const char *logLevelName,
+                               const char *logTag,
+                               unsigned int lineNum,
+                               const char *colorCode,
+                               unsigned char isSavingToFile,
+                               va_list args,
+                               const char *format)
 {
     static char dateTime[50];
     struct timeval currTime;
@@ -164,106 +210,87 @@ void printLog(const char *logLevelName,
 
     struct tm tm = *localtime((time_t *)(&currTime.tv_sec));
 #if __linux__
-    sprintf(dateTime, "%d-%02d-%02d %02d:%02d:%02d:%06ld"
+    sprintf(dateTime,
+            "%d-%02d-%02d %02d:%02d:%02d:%06ld",
 #else
-    sprintf(dateTime, "%d-%02d-%02d %02d:%02d:%02d:%06d"
+    sprintf(dateTime,
+            "%d-%02d-%02d %02d:%02d:%02d:%06d",
 #endif // __linux__
-            ,
             tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
             tm.tm_hour, tm.tm_min, tm.tm_sec, currTime.tv_usec);
 
-    if (STREAM_STDOUT == gCurrLogStream)
+    // To avoid interleaved messages
+    if (gIsMutexInitalized)
     {
-        // Output Stream in stdout
-        if (isSavingToFile)
-        {
-            // To avoid interleaved messages
-            if (gIsMutexInitalized)
-            {
-                pthread_mutex_lock(&s_logMutex);
-            }
-
-            // Remove the color codes from the string
-            fprintf(stdout, "[%s]:[%s] [%s:%d] ", dateTime, logLevelName, logTag, lineNum);
-            vfprintf(stdout, format, args);
-            vfprintf(stdout, "\n", args);
-
-            // To avoid interleaved messages
-            if (gIsMutexInitalized)
-            {
-                pthread_mutex_unlock(&s_logMutex);
-            }
-        }
-        else
-        {
-            // To avoid interleaved messages
-            if (gIsMutexInitalized)
-            {
-                pthread_mutex_lock(&s_logMutex);
-            }
-
-            fprintf(stdout, "%s[%s]:[%s] [%s:%d] ", colorCode, dateTime, logLevelName, logTag, lineNum);
-            vfprintf(stdout, format, args);
-            vfprintf(stdout, "\033[1;0m\n", args);
-
-            // To avoid interleaved messages
-            if (gIsMutexInitalized)
-            {
-                pthread_mutex_unlock(&s_logMutex);
-            }
-        }
+        pthread_mutex_lock(&s_logMutex);
     }
-    else if (STREAM_STDERR == gCurrLogStream)
+
+    // if saving to file remove color codes
+    if (isSavingToFile)
     {
-        // Output Stream in stderr
-        if (isSavingToFile)
-        {
-            // To avoid interleaved messages
-            if (gIsMutexInitalized)
-            {
-                pthread_mutex_lock(&s_logMutex);
-            }
+        // remove the color codes
+        fprintf(stream,
+                "[%s]:[%s] [%s:%d] ",
+                dateTime,
+                logLevelName,
+                logTag,
+                lineNum);
+        vfprintf(stream, format, args);
+        vfprintf(stream, "\n", args);
+    }
+    else
+    {
+        fprintf(stream,
+                "%s[%s]:[%s] [%s:%d] ",
+                colorCode,
+                dateTime,
+                logLevelName,
+                logTag,
+                lineNum);
+        vfprintf(stream, format, args);
+        vfprintf(stream, "\033[1;0m\n", args);
+    }
 
-            // Remove the color codes from the string
-            fprintf(stderr, "[%s]:[%s] [%s:%d] ", dateTime, logLevelName, logTag, lineNum);
-            vfprintf(stderr, format, args);
-            vfprintf(stderr, "\n", args);
-
-            // To avoid interleaved messages
-            if (gIsMutexInitalized)
-            {
-                pthread_mutex_unlock(&s_logMutex);
-            }
-        }
-        else
-        {
-            // To avoid interleaved messages
-            if (gIsMutexInitalized)
-            {
-                pthread_mutex_lock(&s_logMutex);
-            }
-
-            fprintf(stderr, "%s[%s]:[%s] [%s:%d] ", colorCode, dateTime, logLevelName, logTag, lineNum);
-            vfprintf(stderr, format, args);
-            vfprintf(stderr, "\033[1;0m\n", args);
-
-            // To avoid interleaved messages
-            if (gIsMutexInitalized)
-            {
-                pthread_mutex_unlock(&s_logMutex);
-            }
-        }
+    // To avoid interleaved messages
+    if (gIsMutexInitalized)
+    {
+        pthread_mutex_unlock(&s_logMutex);
     }
 }
 
-void setLogLevel(enum LogLevel level)
+static inline void LogLine(FILE *stream,
+                           const char *logLevelName,
+                           const char *logTag,
+                           unsigned int lineNum,
+                           const char *colorCode,
+                           unsigned char isSavingToFile,
+                           const char *format,
+                           ...)
 {
+    va_list args;
+    va_start(args, format);
+    LogLineArgs(stream,
+                logLevelName,
+                logTag,
+                lineNum,
+                colorCode,
+                isSavingToFile,
+                args,
+                format);
+    va_end(args);
+}
+
+void UniLogger_SetLogLevel(enum LogLevel level)
+{
+    // initalize the stream
+    gCurrLogStream = stdout;
+
     // initalize the mutex
     if (!gIsMutexInitalized)
     {
-        if (0 != initalizeMutex())
+        if (0 != InitalizeMutex())
         {
-            printf("[UniLogger] Failed to initalize mutex\n");
+            ERROR_LOG("Failed to initalize mutex");
         }
     }
 
@@ -277,26 +304,30 @@ void setLogLevel(enum LogLevel level)
 
     if (envVarData == NULL)
     {
-        printf("Environment Variable \"%s\" is not available.\n", envName);
+        INFO_LOG("Environment Variable \"%s\" is not available.", envName);
         gCurrLogLevel = level;
         if (gCurrLogLevel == LOG_LEVEL_PROFILE)
-            printf("Setting Log Level to Profile\n");
+        {
+            INFO_LOG("Setting Log Level to Profile");
+        }
         else
-            printf("Setting Log Level to %d\n", (unsigned char)(gCurrLogLevel));
+        {
+            INFO_LOG("Setting Log Level to %d", (unsigned char)(gCurrLogLevel));
+        }
     }
     else
     {
-        printf("Environment Variable \"%s\" is set to %s\n", envName, envVarData);
+        INFO_LOG("Environment Variable \"%s\" is set to %s", envName, envVarData);
 
         // Check the Size of the Environment Variable (it should be 1)
         size_t envVarSize = strlen(envVarData);
         if (envVarSize != 1)
         {
-            printf("Invalid Environment Variable Value (%s) passed\n", envVarData);
+            ERROR_LOG("Invalid Environment Variable Value (%s) passed", envVarData);
             // Avaialble Logs
-            printAvaialbleLogs();
+            PrintAvaialbleLogs();
             gCurrLogLevel = LOG_LEVEL_OFF;
-            printf("Setting Log Level to %d\n", (unsigned char)(gCurrLogLevel));
+            INFO_LOG("Setting Log Level to %d", (unsigned char)(gCurrLogLevel));
             return;
         }
         else
@@ -307,22 +338,22 @@ void setLogLevel(enum LogLevel level)
             // 'P' for Profile Log Level
             if ((logLevel < 48 || logLevel > (48 + (LOG_MAX_LEVEL - 2))) && (logLevel != 'P'))
             {
-                printf("Invalid Environment Variable Value (%s) passed\n", envVarData);
-                printAvaialbleLogs();
+                ERROR_LOG("Invalid Environment Variable Value (%s) passed", envVarData);
+                PrintAvaialbleLogs();
                 gCurrLogLevel = LOG_LEVEL_OFF;
-                printf("Setting Log Level to %d\n", (unsigned char)(gCurrLogLevel));
+                INFO_LOG("Setting Log Level to %d", (unsigned char)(gCurrLogLevel));
                 return;
             }
 
             if (logLevel == 'P')
             {
                 gCurrLogLevel = LOG_LEVEL_PROFILE;
-                printf("Setting Log Level to Profile\n");
+                INFO_LOG("Setting Log Level to Profile");
             }
             else
             {
                 gCurrLogLevel = (enum LogLevel)(logLevel - 48);
-                printf("Setting Log Level to %d\n", (unsigned char)(gCurrLogLevel));
+                INFO_LOG("Setting Log Level to %d", (unsigned char)(gCurrLogLevel));
             }
         }
     }
@@ -333,14 +364,17 @@ void setLogLevel(enum LogLevel level)
     return;
 }
 
-void setLogStream(enum LogStream stream)
+void UniLogger_SetLogStream(enum LogStream stream)
 {
+    // default value of strea,
+    gCurrLogStream = stdout;
+
     // initalize the mutex
     if (!gIsMutexInitalized)
     {
-        if (0 != initalizeMutex())
+        if (0 != InitalizeMutex())
         {
-            printf("[UniLogger] Failed to initalize mutex\n");
+            ERROR_LOG("Failed to initalize mutex");
         }
     }
 
@@ -354,45 +388,71 @@ void setLogStream(enum LogStream stream)
 
     if (envVarData == NULL)
     {
-        printf("Environment Variable \"%s\" is not available\n", envName);
-
+        char *streamName = "stdout";
         // Set the Log Stream
-        gCurrLogStream = stream;
+        if (STREAM_STDOUT == stream)
+        {
+            gCurrLogStream = stdout;
+            streamName = "stdout";
+        }
+        else if (STREAM_STDERR == stream)
+        {
+            gCurrLogStream = stderr;
+            streamName = "stderr";
+        }
+        else
+        {
+            // unknown log stream
+            gCurrLogStream = stdout;
+        }
 
-        printf("Setting Log Stream to %d\n", (unsigned char)(gCurrLogStream));
+        INFO_LOG("Environment Variable \"%s\" is not available", envName);
+        INFO_LOG("Setting Log Stream to %s", streamName);
     }
     else
     {
-        printf("Environment Variable \"%s\" is set to %s\n", envName, envVarData);
+        INFO_LOG("Environment Variable \"%s\" is set to %s", envName, envVarData);
 
         // Check the Size of the Environment Variable (it should be 1)
         size_t envVarSize = strlen(envVarData);
         if (envVarSize != 1)
         {
-            printf("Invalid Environment Variable Value (%s) passed\n", envVarData);
+            ERROR_LOG("Invalid Environment Variable Value (%s) passed", envVarData);
             // Avaialble Logs Stream
-            printf("Available Log Stream are: 0 and 1\n");
-            gCurrLogStream = STREAM_STDOUT;
-            printf("Setting Log Stream to %d\n", (unsigned char)(gCurrLogStream));
+            INFO_LOG("Available Log Stream are: 0 and 1");
+            gCurrLogStream = stdout;
+            INFO_LOG("Setting Log Stream to stdout");
             return;
         }
         else
         {
+            // stream name
+            char *streamName = "stdout";
+
             // Check the Character in LOG_STREAM
             const unsigned char logStream = envVarData[0];
             // '0' and '1'
-            if (logStream < 48 && logStream > 49)
+            if (logStream < 48 || logStream > 49)
             {
-                printf("Invalid Environment Variable Value (%s) passed\n", envVarData);
+                ERROR_LOG("Invalid Environment Variable Value (%s) passed", envVarData);
                 // Avaialble Logs Stream
-                printf("Available Log Stream are: 0 and 1\n");
-                gCurrLogStream = STREAM_STDOUT;
-                printf("Setting Log Stream to %d\n", (unsigned char)(gCurrLogStream));
+                INFO_LOG("Available Log Stream are: 0 and 1");
+                gCurrLogStream = stdout;
+                INFO_LOG("Setting Log Stream to stdout");
                 return;
             }
 
-            gCurrLogStream = (enum LogStream)(logStream - 48);
-            printf("Setting Log Stream to %d\n", (unsigned char)(gCurrLogStream));
+            if (48 == logStream)
+            {
+                gCurrLogStream = stdout;
+                streamName = "stdout";
+            }
+            else if (49 == logStream)
+            {
+                gCurrLogStream = stderr;
+                streamName = "stderr";
+            }
+            LOG_INFO("Setting Log Stream to %s", streamName);
         }
     }
 
@@ -402,14 +462,14 @@ void setLogStream(enum LogStream stream)
     return;
 }
 
-void setLogFile(const char *filepath)
+void UniLogger_SetLogFile(const char *filepath)
 {
     // initalize the mutex
     if (!gIsMutexInitalized)
     {
-        if (0 != initalizeMutex())
+        if (0 != InitalizeMutex())
         {
-            printf("[UniLogger] Failed to initalize mutex\n");
+            ERROR_LOG("Failed to initalize mutex");
         }
     }
 
@@ -417,7 +477,9 @@ void setLogFile(const char *filepath)
     {
         // Return if already initalized
         if (gIsLogFileInitalized)
+        {
             return;
+        }
 
         // Read the Environment Variable
         const char *envName = "LOG_FILE";
@@ -426,44 +488,49 @@ void setLogFile(const char *filepath)
         // Check if the Environment variable is set
         if (NULL == envVarData)
         {
-            printf("Environment Variable \"%s\" is not available\n", envName);
+            INFO_LOG("Environment Variable \"%s\" is not available", envName);
 
             // Check if the filepath passes is null
             if (NULL == filepath)
             {
                 // Defaulting to logger.log
-                printf("Found NULL in filepath, Defaulting to logger.log");
-                gIsLogFileInitalized = initalizeLogFile(gCurrLogStream, "logger.log");
+                WARN_LOG("Found NULL in filepath, Defaulting to logger.log");
+                gIsLogFileInitalized = InitalizeLogFile(gCurrLogStream, "logger.log");
             }
             else
             {
                 // Save to the respective file
-                printf("Saving Logs to file (%s)\n", filepath);
-                gIsLogFileInitalized = initalizeLogFile(gCurrLogStream, filepath);
+                INFO_LOG("Saving Logs to file (%s)", filepath);
+                gIsLogFileInitalized = InitalizeLogFile(gCurrLogStream, filepath);
             }
             return;
         }
         else
         {
             // Save to the Environment variable file
-            printf("Environment Variable \"%s\" is set to %s\n", envName, envVarData);
-            printf("Saving Logs to file (%s)\n", envVarData);
-            gIsLogFileInitalized = initalizeLogFile(gCurrLogStream, envVarData);
+            INFO_LOG("Environment Variable \"%s\" is set to %s", envName, envVarData);
+            INFO_LOG("Saving Logs to file (%s)", envVarData);
+            gIsLogFileInitalized = InitalizeLogFile(gCurrLogStream, envVarData);
             return;
         }
     }
     else
     {
-        // Function Needs to be called after setLogLevel() and setLogStream()
+        // Function Needs to be called after UniLogger_SetLogLevel() and UniLogger_SetLogStream()
         // Reason: File needs to created based on the LogStream
-        printf("Please call the function setLogFile() after setLogLevel() and setLogStream()\n");
+        ERROR_LOG("Please call the function UniLogger_SetLogFile() after UniLogger_SetLogLevel() and UniLogger_SetLogStream()");
     }
 
     return;
 }
 
-void logCustom(enum LogLevel level, const char *logTag, unsigned int lineNum, const char *format, ...)
+void UniLogger_CustomLogFn(enum LogLevel level, const char *logTag, unsigned int lineNum, const char *format, ...)
 {
+    if (!gCurrLogStream)
+    {
+        gCurrLogStream = stdout;
+    }
+
     if (LOG_LEVEL_PROFILE == gCurrLogLevel)
     {
         if (LOG_LEVEL_PROFILE == level)
@@ -471,13 +538,14 @@ void logCustom(enum LogLevel level, const char *logTag, unsigned int lineNum, co
             // print profile logs and return
             va_list args;
             va_start(args, format);
-            printLog(logLevelNames[(unsigned char)level - 1],
-                     logTag,
-                     lineNum,
-                     colorCodes[(unsigned char)(level)-1],
-                     format,
-                     args,
-                     gIsLogFileInitalized);
+            LogLineArgs(gCurrLogStream,
+                        logLevelNames[(unsigned char)level - 1],
+                        logTag,
+                        lineNum,
+                        colorCodes[(unsigned char)(level)-1],
+                        gIsLogFileInitalized,
+                        args,
+                        format);
             va_end(args);
             return;
         }
@@ -487,23 +555,26 @@ void logCustom(enum LogLevel level, const char *logTag, unsigned int lineNum, co
         // Check if the log level is greater than Enabled Log Level
         // If greater, return. as it is not required to print
         if (level > gCurrLogLevel)
+        {
             return;
+        }
 
         va_list args;
         va_start(args, format);
-        printLog(logLevelNames[(unsigned char)level - 1],
-                 logTag,
-                 lineNum,
-                 colorCodes[(unsigned char)(level)-1],
-                 format,
-                 args,
-                 gIsLogFileInitalized);
+        LogLineArgs(gCurrLogStream,
+                    logLevelNames[(unsigned char)level - 1],
+                    logTag,
+                    lineNum,
+                    colorCodes[(unsigned char)(level)-1],
+                    gIsLogFileInitalized,
+                    args,
+                    format);
         va_end(args);
         return;
     }
 }
 
-void closeLogger()
+void UniLogger_CloseLogger()
 {
     if (gIsMutexInitalized)
     {

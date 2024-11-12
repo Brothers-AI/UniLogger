@@ -16,9 +16,9 @@
 int main(int argc, char const *argv[])
 {
     // Set the Log level
-    setLogLevel(LOG_LEVEL_TRACE);
+    UniLogger_SetLogLevel(LOG_LEVEL_TRACE);
     // Set the stream type
-    setLogStream(STREAM_STDOUT);
+    UniLogger_SetLogStream(STREAM_STDOUT);
 
     LOG_FATAL("Fatal logs");
     LOG_ERROR("Error logs");
@@ -29,7 +29,7 @@ int main(int argc, char const *argv[])
     LOG_PROFILE("Profile logs");
 
     // Close the logger
-    closeLogger();
+    UniLogger_CloseLogger();
 
     return 0;
 }

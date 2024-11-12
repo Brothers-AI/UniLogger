@@ -3,9 +3,9 @@
 ## User Guide
 
 **APIs**
- - **setLogLevel()**            - To set the Log Level for Logging
- - **setLogStream()**           - To set the Log Stream type (stdout / stderr)
- - **setLogFile()**             - To set the Log file for saving the logs
+ - **UniLogger_SetLogLevel()**            - To set the Log Level for Logging
+ - **UniLogger_SetLogStream()**           - To set the Log Stream type (stdout / stderr)
+ - **UniLogger_SetLogFile()**             - To set the Log file for saving the logs
  - **LOG_FATAL()**              - To print fatal logs (LOG_LEVEL = 1)
  - **LOG_ERROR()**              - To print error logs (LOG_LEVEL = 2)
  - **LOG_WARN()**               - To print warning logs (LOG_LEVEL = 3)
@@ -31,10 +31,10 @@
   
 ## Usage
 
-1. **setLogLevel()**
+1. **UniLogger_SetLogLevel()**
    1. Use this API to set the Log Level for Logging prints
    2. This API must be used in order to use the Environment variable `LOG_LEVEL` to get affect at runtime
-   3. Environment Variable `LOG_LEVEL` if available, Log level will be setted to the value of `LOG_LEVEL` else the value passed to `setLogLevel` will be used.
+   3. Environment Variable `LOG_LEVEL` if available, Log level will be setted to the value of `LOG_LEVEL` else the value passed to `UniLogger_SetLogLevel` will be used.
    4. Available Values for `LOG_LEVEL` are: 0, 1, 2, 3, 4, 5, 6, P
    5. Environment Variable `LOG_LEVEL` can be set using: `export LOG_LEVEL=0`
    6. This API must be called only once in the main function
@@ -45,16 +45,16 @@
 
    int main()
    {
-      setLogLevel(LOG_LEVEL_PROFILE);
+      UniLogger_SetLogLevel(LOG_LEVEL_PROFILE);
       return 0;
    }
    ```
 
 
-2. **setLogStream()**
+2. **UniLogger_SetLogStream()**
    1. Use this API to set the Log Stream for Logging
    2. This API must be used in order to use the Environment Variable `LOG_STREAM` to get affect at runtime.
-   3. Envirnoment Variable `LOG_STREAM` if available, Log stream will be setted to the value of `LOG_STREAM` else the value passes to `setLogStream` will be used.
+   3. Envirnoment Variable `LOG_STREAM` if available, Log stream will be setted to the value of `LOG_STREAM` else the value passes to `UniLogger_SetLogStream` will be used.
    4. Available values for `LOG_STREAM` are: 0 (stdout), 1 (stderr)
    5. Environment Variable `LOG_STREAM` can be set using `export LOG_STREAM=0`
    6. This API must be called only once in the main function
@@ -65,15 +65,15 @@
 
    int main()
    {
-      setLogStream(STREAM_STDOUT);
+      UniLogger_SetLogStream(STREAM_STDOUT);
       return 0;
    }
    ```
 
-3. **setLogFile()**
+3. **UniLogger_SetLogFile()**
    1. Use this API to set the Log File for saving the logs
    2. This API must be used in order to use the Environment variable `LOG_FILE` to get affect at runtime
-   3. Environment Variable `LOG_FILE` if available, Log file will used as the value of `LOG_FILE` else the value passed to `setLogFile` will be used.
+   3. Environment Variable `LOG_FILE` if available, Log file will used as the value of `LOG_FILE` else the value passed to `UniLogger_SetLogFile` will be used.
    4. Environment Variable `LOG_FILE` can be set using: `export LOG_FILE=logger.log`
    5. This API must be called only once in main function
 
@@ -83,7 +83,7 @@
 
    int main()
    {
-      setLogFile("logfile.log");
+      UniLogger_SetLogFile("logfile.log");
       return 0;
    }
     ```
@@ -100,9 +100,9 @@
 int main(int argc, char const *argv[])
 {
    // Set the Log level
-   setLogLevel(LOG_LEVEL_TRACE);
+   UniLogger_SetLogLevel(LOG_LEVEL_TRACE);
    // Set the stream type
-   setLogStream(STREAM_STDOUT);
+   UniLogger_SetLogStream(STREAM_STDOUT);
 
    LOG_FATAL("Fatal logs");
    LOG_ERROR("Error logs");
@@ -127,11 +127,11 @@ int main(int argc, char const *argv[])
 int main(int argc, char const *argv[])
 {
    // Set the Log level
-   setLogLevel(LOG_LEVEL_TRACE);
+   UniLogger_SetLogLevel(LOG_LEVEL_TRACE);
    // Set the stream type
-   setLogStream(STREAM_STDOUT);
+   UniLogger_SetLogStream(STREAM_STDOUT);
    // Set the log file path
-   setLogFile("logger.log");
+   UniLogger_SetLogFile("logger.log");
 
    LOG_FATAL("Fatal logs");
    LOG_ERROR("Error logs");
@@ -156,9 +156,9 @@ int main(int argc, char const *argv[])
 int main(int argc, char const *argv[])
 {
    // Set the Log level
-   setLogLevel(LOG_LEVEL_TRACE);
+   UniLogger_SetLogLevel(LOG_LEVEL_TRACE);
    // Set the stream type
-   setLogStream(STREAM_STDOUT);
+   UniLogger_SetLogStream(STREAM_STDOUT);
 
    LOG_FATAL("Fatal logs");
    LOG_ERROR("Error logs");
@@ -183,11 +183,11 @@ int main(int argc, char const *argv[])
 int main(int argc, char const *argv[])
 {
    // Set the Log level
-   setLogLevel(LOG_LEVEL_TRACE);
+   UniLogger_SetLogLevel(LOG_LEVEL_TRACE);
    // Set the stream type
-   setLogStream(STREAM_STDOUT);
+   UniLogger_SetLogStream(STREAM_STDOUT);
    // Set the log file path
-   setLogFile("logger.log");
+   UniLogger_SetLogFile("logger.log");
 
    LOG_FATAL("Fatal logs");
    LOG_ERROR("Error logs");

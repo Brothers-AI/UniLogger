@@ -34,7 +34,15 @@ extern "C"
  * #define LOG_TAG "NAME"
  * #endif // LOG_TAG
  */
+#ifndef __FILENAME__
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#endif // __FILENAME__
+
+#ifdef USE_FILE_NAME
+#define LOG_TAG __FILENAME__
+#else
 #define LOG_TAG "UniLogger"
+#endif // USE_FILE_NAME
 
     /**
      * @brief Enums for Log Levels
@@ -77,48 +85,83 @@ extern "C"
      *
      * @param level Log Level (LogLevel)
      */
-    void setLogLevel(enum LogLevel level);
+    void UniLogger_SetLogLevel(enum LogLevel level);
 
     /**
      * @brief Set the Log Stream
      *
      * @param stream stream (LogStream)
      */
-    void setLogStream(enum LogStream stream);
+    void UniLogger_SetLogStream(enum LogStream stream);
 
     /**
      * @brief Saves Logs to File instead of console print
      *
      * @param filepath filepath to save the log
      */
-    void setLogFile(const char *filepath);
+    void UniLogger_SetLogFile(const char *filepath);
 
     /**
      * @brief Function to close the UniLogger
      */
-    void closeLogger();
+    void UniLogger_CloseLogger();
 
     /**
      * @brief Common function to log the prints
-     * 
+     *
      * @param level log level
      * @param logTag log tag
      * @param lineNum line number of log
      * @param format print format arguments
-     * @param ... 
+     * @param ...
      */
-    void logCustom(enum LogLevel level,
-                   const char *logTag,
-                   unsigned int lineNum,
-                   const char *format, ...);
+    void UniLogger_CustomLogFn(enum LogLevel level,
+                               const char *logTag,
+                               unsigned int lineNum,
+                               const char *format, ...);
 
-#define LOG_FATAL(...) logCustom(LOG_LEVEL_FATAL, LOG_TAG, __LINE__, ##__VA_ARGS__)
-#define LOG_ERROR(...) logCustom(LOG_LEVEL_ERROR, LOG_TAG, __LINE__, ##__VA_ARGS__)
-#define LOG_WARN(...) logCustom(LOG_LEVEL_WARN, LOG_TAG, __LINE__, ##__VA_ARGS__)
-#define LOG_INFO(...) logCustom(LOG_LEVEL_INFO, LOG_TAG, __LINE__, ##__VA_ARGS__)
-#define LOG_DEBUG(...) logCustom(LOG_LEVEL_DEBUG, LOG_TAG, __LINE__, ##__VA_ARGS__)
-#define LOG_TRACE(...) logCustom(LOG_LEVEL_TRACE, LOG_TAG, __LINE__, ##__VA_ARGS__)
-#define LOG_PROFILE(...) logCustom(LOG_LEVEL_PROFILE, LOG_TAG, __LINE__, ##__VA_ARGS__)
+/**
+ * @brief Log method for fatal error
+ */
+#define LOG_FATAL(...) UniLogger_CustomLogFn(LOG_LEVEL_FATAL, \
+                                             LOG_TAG,         \
+                                             __LINE__, ##__VA_ARGS__)
+/**
+ * @brief Log method for default error
+ */
+#define LOG_ERROR(...) UniLogger_CustomLogFn(LOG_LEVEL_ERROR, \
+                                             LOG_TAG,         \
+                                             __LINE__, ##__VA_ARGS__)
+/**
+ * @brief Log method for warnings
+ */
+#define LOG_WARN(...) UniLogger_CustomLogFn(LOG_LEVEL_WARN, \
+                                            LOG_TAG,        \
+                                            __LINE__, ##__VA_ARGS__)
+/**
+ * @brief Log method for information logs
+ */
+#define LOG_INFO(...) UniLogger_CustomLogFn(LOG_LEVEL_INFO, \
+                                            LOG_TAG,        \
+                                            __LINE__, ##__VA_ARGS__)
+/**
+ * @brief Log method for debug logs
+ */
+#define LOG_DEBUG(...) UniLogger_CustomLogFn(LOG_LEVEL_DEBUG, \
+                                             LOG_TAG,         \
+                                             __LINE__, ##__VA_ARGS__)
+/**
+ * @brief Log method for trace logs
+ */
+#define LOG_TRACE(...) UniLogger_CustomLogFn(LOG_LEVEL_TRACE, \
+                                             LOG_TAG,         \
+                                             __LINE__, ##__VA_ARGS__)
+/**
+ * @brief Log method for profile logs
+ */
+#define LOG_PROFILE(...) UniLogger_CustomLogFn(LOG_LEVEL_PROFILE, \
+                                               LOG_TAG,           \
+                                               __LINE__, ##__VA_ARGS__)
 
 #ifdef __cplusplus
 }

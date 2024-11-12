@@ -51,3 +51,4 @@ Please refer to [Usage](docs/UserGuide.md) for Using UniLogger in any Applicatio
 - [x] Build Shared and Static Libraries
 - [x] Build Examples for Usage of Logger
 - [ ] Make Library compatable for Windows
+- [ ] Usage of Queue to store the data while dumping into file, instead of using freopen
