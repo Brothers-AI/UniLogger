@@ -21,12 +21,12 @@
 
 // Current Log Level, Default to Off
 enum LogLevel gCurrLogLevel = LOG_LEVEL_OFF;
-// Flag to Check Environment Variable for Log Level is Read or not
+// Flag to Check Environment variable for Log Level is Read or not
 unsigned char gIsLogLevelInitalized = 0;
 
 // Current Log Stream, Default to stdout
 static FILE *gCurrLogStream;
-// Flag to Check Environment Variable for Log Stream is Read or not
+// Flag to Check Environment variable for Log Stream is Read or not
 unsigned char gIsLogStreamInitalized = 0;
 
 // Flag to Check is Log File Initalized, Default to 0
@@ -42,6 +42,7 @@ unsigned char gIsMutexInitalized = 0;
  * @brief Log level names
  */
 const char logLevelNames[LOG_MAX_LEVEL][10] = {
+    "",
     " FATAL ",
     " ERROR ",
     " WARN  ",
@@ -54,6 +55,7 @@ const char logLevelNames[LOG_MAX_LEVEL][10] = {
  * @brief Color Codes for Different Log Levels
  */
 const char colorCodes[LOG_MAX_LEVEL][10] = {
+    "",
     "\033[1;31m",
     "\033[0;31m",
     "\033[0;33m",
@@ -107,37 +109,39 @@ static inline void LogLineArgs(FILE *stream,
 /**
  * @brief Information log
  */
-#define INFO_LOG(...) LogLine(stdout,                            \
-                              logLevelNames[LOG_LEVEL_INFO - 1], \
-                              LOG_TAG,                           \
-                              __LINE__,                          \
-                              colorCodes[LOG_LEVEL_INFO - 1],    \
+#define INFO_LOG(...) LogLine(stdout,                        \
+                              logLevelNames[LOG_LEVEL_INFO], \
+                              LOG_TAG,                       \
+                              __LINE__,                      \
+                              colorCodes[LOG_LEVEL_INFO],    \
                               0, ##__VA_ARGS__)
 
 /**
  * @brief Error log
  */
-#define ERROR_LOG(...) LogLine(stdout,                             \
-                               logLevelNames[LOG_LEVEL_ERROR - 1], \
-                               LOG_TAG,                            \
-                               __LINE__,                           \
-                               colorCodes[LOG_LEVEL_ERROR - 1],    \
+#define ERROR_LOG(...) LogLine(stdout,                         \
+                               logLevelNames[LOG_LEVEL_ERROR], \
+                               LOG_TAG,                        \
+                               __LINE__,                       \
+                               colorCodes[LOG_LEVEL_ERROR],    \
                                0, ##__VA_ARGS__)
 
 /**
  * @brief Warning log
  */
-#define WARN_LOG(...) LogLine(stdout,                            \
-                              logLevelNames[LOG_LEVEL_WARN - 1], \
-                              LOG_TAG,                           \
-                              __LINE__,                          \
-                              colorCodes[LOG_LEVEL_WARN],        \
+#define WARN_LOG(...) LogLine(stdout,                        \
+                              logLevelNames[LOG_LEVEL_WARN], \
+                              LOG_TAG,                       \
+                              __LINE__,                      \
+                              colorCodes[LOG_LEVEL_WARN],    \
                               0, ##__VA_ARGS__)
 
 /**
  * @brief Print Available Log Levels
+ *
+ * @param name Name of the environment variable
  */
-void PrintAvaialbleLogs()
+void PrintAvaialbleLogs(const char *name)
 {
     char stringData[LOG_MAX_LEVEL * 2] = {0};
     unsigned char i;
@@ -150,7 +154,7 @@ void PrintAvaialbleLogs()
     }
     stringData[2 * i] = 'P';
     // Log Level for Profiling
-    INFO_LOG("Available Values are: %s", stringData);
+    INFO_LOG("Available values for %s are: %s", name, stringData);
 }
 
 /**
@@ -209,15 +213,19 @@ static inline void LogLineArgs(FILE *stream,
     gettimeofday(&currTime, NULL);
 
     struct tm tm = *localtime((time_t *)(&currTime.tv_sec));
-#if __linux__
     sprintf(dateTime,
+#if __linux__
             "%d-%02d-%02d %02d:%02d:%02d:%06ld",
 #else
-    sprintf(dateTime,
             "%d-%02d-%02d %02d:%02d:%02d:%06d",
 #endif // __linux__
-            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-            tm.tm_hour, tm.tm_min, tm.tm_sec, currTime.tv_usec);
+            tm.tm_year + 1900,
+            tm.tm_mon + 1,
+            tm.tm_mday,
+            tm.tm_hour,
+            tm.tm_min,
+            tm.tm_sec,
+            currTime.tv_usec);
 
     // To avoid interleaved messages
     if (gIsMutexInitalized)
@@ -298,13 +306,13 @@ void UniLogger_SetLogLevel(enum LogLevel level)
     if (gIsLogLevelInitalized)
         return;
 
-    // Read the Environment Variable
+    // Read the Environment variable
     const char *envName = "LOG_LEVEL";
     const char *envVarData = getenv(envName);
 
     if (envVarData == NULL)
     {
-        INFO_LOG("Environment Variable \"%s\" is not available.", envName);
+        INFO_LOG("Environment variable \"%s\" is not available.", envName);
         gCurrLogLevel = level;
         if (gCurrLogLevel == LOG_LEVEL_PROFILE)
         {
@@ -317,15 +325,15 @@ void UniLogger_SetLogLevel(enum LogLevel level)
     }
     else
     {
-        INFO_LOG("Environment Variable \"%s\" is set to %s", envName, envVarData);
+        INFO_LOG("Environment variable \"%s\" is set to %s", envName, envVarData);
 
-        // Check the Size of the Environment Variable (it should be 1)
+        // Check the Size of the Environment variable (it should be 1)
         size_t envVarSize = strlen(envVarData);
         if (envVarSize != 1)
         {
-            ERROR_LOG("Invalid Environment Variable Value (%s) passed", envVarData);
+            ERROR_LOG("Invalid Environment variable Value (%s) passed", envVarData);
             // Avaialble Logs
-            PrintAvaialbleLogs();
+            PrintAvaialbleLogs(envName);
             gCurrLogLevel = LOG_LEVEL_OFF;
             INFO_LOG("Setting Log Level to %d", (unsigned char)(gCurrLogLevel));
             return;
@@ -338,8 +346,8 @@ void UniLogger_SetLogLevel(enum LogLevel level)
             // 'P' for Profile Log Level
             if ((logLevel < 48 || logLevel > (48 + (LOG_MAX_LEVEL - 2))) && (logLevel != 'P'))
             {
-                ERROR_LOG("Invalid Environment Variable Value (%s) passed", envVarData);
-                PrintAvaialbleLogs();
+                ERROR_LOG("Invalid Environment variable Value (%s) passed", envVarData);
+                PrintAvaialbleLogs(envName);
                 gCurrLogLevel = LOG_LEVEL_OFF;
                 INFO_LOG("Setting Log Level to %d", (unsigned char)(gCurrLogLevel));
                 return;
@@ -382,7 +390,7 @@ void UniLogger_SetLogStream(enum LogStream stream)
     if (gIsLogStreamInitalized)
         return;
 
-    // Read the Environment Variable
+    // Read the Environment variable
     const char *envName = "LOG_STREAM";
     const char *envVarData = getenv(envName);
 
@@ -406,20 +414,20 @@ void UniLogger_SetLogStream(enum LogStream stream)
             gCurrLogStream = stdout;
         }
 
-        INFO_LOG("Environment Variable \"%s\" is not available", envName);
+        INFO_LOG("Environment variable \"%s\" is not available", envName);
         INFO_LOG("Setting Log Stream to %s", streamName);
     }
     else
     {
-        INFO_LOG("Environment Variable \"%s\" is set to %s", envName, envVarData);
+        INFO_LOG("Environment variable \"%s\" is set to %s", envName, envVarData);
 
-        // Check the Size of the Environment Variable (it should be 1)
+        // Check the Size of the Environment variable (it should be 1)
         size_t envVarSize = strlen(envVarData);
         if (envVarSize != 1)
         {
-            ERROR_LOG("Invalid Environment Variable Value (%s) passed", envVarData);
+            ERROR_LOG("Invalid Environment variable Value (%s) passed", envVarData);
             // Avaialble Logs Stream
-            INFO_LOG("Available Log Stream are: 0 and 1");
+            INFO_LOG("Available values for Log Stream are: 0 and 1");
             gCurrLogStream = stdout;
             INFO_LOG("Setting Log Stream to stdout");
             return;
@@ -432,16 +440,6 @@ void UniLogger_SetLogStream(enum LogStream stream)
             // Check the Character in LOG_STREAM
             const unsigned char logStream = envVarData[0];
             // '0' and '1'
-            if (logStream < 48 || logStream > 49)
-            {
-                ERROR_LOG("Invalid Environment Variable Value (%s) passed", envVarData);
-                // Avaialble Logs Stream
-                INFO_LOG("Available Log Stream are: 0 and 1");
-                gCurrLogStream = stdout;
-                INFO_LOG("Setting Log Stream to stdout");
-                return;
-            }
-
             if (48 == logStream)
             {
                 gCurrLogStream = stdout;
@@ -451,6 +449,14 @@ void UniLogger_SetLogStream(enum LogStream stream)
             {
                 gCurrLogStream = stderr;
                 streamName = "stderr";
+            }
+            else
+            {
+                ERROR_LOG("Invalid Environment variable Value (%s) passed", envVarData);
+                // Avaialble Logs Stream
+                INFO_LOG("Available values for Log Stream are: 0 and 1");
+                gCurrLogStream = stdout;
+                streamName = "stdout";
             }
             LOG_INFO("Setting Log Stream to %s", streamName);
         }
@@ -481,14 +487,14 @@ void UniLogger_SetLogFile(const char *filepath)
             return;
         }
 
-        // Read the Environment Variable
+        // Read the Environment variable
         const char *envName = "LOG_FILE";
         const char *envVarData = getenv(envName);
 
         // Check if the Environment variable is set
         if (NULL == envVarData)
         {
-            INFO_LOG("Environment Variable \"%s\" is not available", envName);
+            INFO_LOG("Environment variable \"%s\" is not available", envName);
 
             // Check if the filepath passes is null
             if (NULL == filepath)
@@ -508,7 +514,7 @@ void UniLogger_SetLogFile(const char *filepath)
         else
         {
             // Save to the Environment variable file
-            INFO_LOG("Environment Variable \"%s\" is set to %s", envName, envVarData);
+            INFO_LOG("Environment variable \"%s\" is set to %s", envName, envVarData);
             INFO_LOG("Saving Logs to file (%s)", envVarData);
             gIsLogFileInitalized = InitalizeLogFile(gCurrLogStream, envVarData);
             return;
@@ -539,10 +545,10 @@ void UniLogger_CustomLogFn(enum LogLevel level, const char *logTag, unsigned int
             va_list args;
             va_start(args, format);
             LogLineArgs(gCurrLogStream,
-                        logLevelNames[(unsigned char)level - 1],
+                        logLevelNames[(unsigned char)level],
                         logTag,
                         lineNum,
-                        colorCodes[(unsigned char)(level)-1],
+                        colorCodes[(unsigned char)(level)],
                         gIsLogFileInitalized,
                         args,
                         format);
@@ -562,10 +568,10 @@ void UniLogger_CustomLogFn(enum LogLevel level, const char *logTag, unsigned int
         va_list args;
         va_start(args, format);
         LogLineArgs(gCurrLogStream,
-                    logLevelNames[(unsigned char)level - 1],
+                    logLevelNames[(unsigned char)level],
                     logTag,
                     lineNum,
-                    colorCodes[(unsigned char)(level)-1],
+                    colorCodes[(unsigned char)(level)],
                     gIsLogFileInitalized,
                     args,
                     format);
@@ -582,6 +588,12 @@ void UniLogger_CloseLogger()
         pthread_mutex_destroy(&s_logMutex);
     }
 
+    // close the file if opened
+    if (gIsLogFileInitalized)
+    {
+        fclose(gCurrLogStream);
+    }
+
     if (gIsLogLevelInitalized)
     {
         // Reset the values
@@ -593,7 +605,7 @@ void UniLogger_CloseLogger()
     {
         // Reset the values
         gIsLogStreamInitalized = 0;
-        gCurrLogStream = STREAM_STDOUT;
+        gCurrLogStream = stdout;
     }
 
     return;

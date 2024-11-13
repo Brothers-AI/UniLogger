@@ -10,6 +10,9 @@
  */
 #include <iostream>
 
+// To use file name in the Logs
+#define USE_FILE_NAME
+
 // UniLogger Includes
 #include <UniLogger.h>
 
