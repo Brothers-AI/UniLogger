@@ -32,7 +32,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_LIBRARY_DIR})
 set(CMAKE_C_FLAGS   "${CMAKE_CXX_FLAGS} -Wall")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
-if(NOT BUILD_SHARED_LIBS)
+if(NOT UL_BUILD_SHARED_LIBS)
     message(STATUS "Enabling -fPIC option for static library")
     set(CMAKE_C_FLAGS   "${CMAKE_CXX_FLAGS} -fPIC")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
@@ -49,7 +49,7 @@ set(SOURCE_FILES
 )
 
 # Building Shared or Static Library
-if(BUILD_SHARED_LIBS)
+if(UL_BUILD_SHARED_LIBS)
     add_library(
         ${PROJECT_NAME} SHARED
         ${SOURCE_FILES}
@@ -62,7 +62,7 @@ else()
 endif()
 
 # Building Examples
-if(${BUILD_EXAMPLES})
+if(${UL_BUILD_EXAMPLES})
     # Set Runtime Directory
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_EXAMPLES_EXE_DIR})
 
@@ -100,7 +100,7 @@ if(${BUILD_EXAMPLES})
         UniLogger
     )
 
-    if(${BUILD_SHARED_LIBS})
+    if(${UL_BUILD_SHARED_LIBS})
         # Copy the DLL to Executable folder
         if(WIN32)
             add_custom_command(
@@ -135,7 +135,7 @@ message(STATUS "| C Standard          : ${CMAKE_C_STANDARD}")
 message(STATUS "| CXX Standard        : ${CMAKE_CXX_STANDARD}")
 message(STATUS "| Build Type          : ${CMAKE_BUILD_TYPE}")
 
-if(BUILD_SHARED_LIBS)
+if(UL_BUILD_SHARED_LIBS)
     set(LIBRARY_TYPE "Shared Library (.so / .dll)")
 else()
     set(LIBRARY_TYPE "Static Library (.a / .lib)")
@@ -143,6 +143,6 @@ endif()
 
 message(STATUS "| LIBRARY_TYPE        : ${LIBRARY_TYPE}")
 message(STATUS "| UniLogger Directory : ${UNI_LOGGER_DIR}")
-message(STATUS "| Build Examples      : ${BUILD_EXAMPLES}")
+message(STATUS "| Build Examples      : ${UL_BUILD_EXAMPLES}")
 message(STATUS "| Install to          : ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "------------------------------------------------")

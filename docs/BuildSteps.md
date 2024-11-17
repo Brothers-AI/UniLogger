@@ -19,8 +19,8 @@
 
 | CMake Argument           | Value   | Usage                                           |
 | ------------------------ | ------- | ------------------------------------------------|
-| BUILD_SHARED_LIBS        | ON      | Builds Shared Library for CppLogger             |
-| BUILD_SHARED_LIBS        | OFF     | Builds Static Library for CppLogger             |
+| UL_BUILD_SHARED_LIBS     | ON      | Builds Shared Library for CppLogger             |
+| UL_BUILD_SHARED_LIBS     | OFF     | Builds Static Library for CppLogger             |
 | BUILS_EXAMPLES           | ON      | Builds Sample Example for CppLogger             |
 | CMAKE_BUILD_TYPE         | Debug   | Builds Library in Debug Mode                    |
 | CMAKE_BUILD_TYPE         | Release | Builds Library in Release Mode                  |
@@ -33,7 +33,7 @@
 Go the Directory where the repository is cloned.
 ```
     mkdir build;cd build
-    cmake -DBUILD_SHARED_LIBS=ON -DBUILD_EXAMPLES=ON ..
+    cmake -DUL_BUILD_SHARED_LIBS=ON -DUL_BUILD_EXAMPLES=ON ..
     make
 ```
 
@@ -42,7 +42,7 @@ Go the Directory where the repository is cloned.
 Go the Directory where the repository is cloned.
 ```
     mkdir build;cd build
-    cmake -DBUILD_SHARED_LIBS=OFF -DBUILD_EXAMPLES=ON ..
+    cmake -DUL_BUILD_SHARED_LIBS=OFF -DUL_BUILD_EXAMPLES=ON ..
     make
 ```
 

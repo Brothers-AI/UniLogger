@@ -9,11 +9,12 @@
 cmake_minimum_required(VERSION 3.1)
 
 # Build Options
+string(COMPARE EQUAL "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_SOURCE_DIR}" UL_STANDALONE)
 
 # For Building Shared or Static Library
-set(BUILD_SHARED_LIBS    ON                            CACHE BOOL   "Build shared libraries (.dll / .so)")
+set(UL_BUILD_SHARED_LIBS OFF                           CACHE BOOL   "Build shared libraries (.dll / .so)")
 # For Building Examples for Logger
-set(BUILD_EXAMPLES       OFF                           CACHE BOOL   "Build Examples")
+set(UL_BUILD_EXAMPLES    ${UL_STANDALONE}              CACHE BOOL   "Build Examples")
 # For Building for Release or Debug
 set(CMAKE_BUILD_TYPE     "Release"                     CACHE STRING "Build Type")
 # For Installing Logger to specific folder
